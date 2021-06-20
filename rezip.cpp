@@ -5,6 +5,15 @@
 
 #define NAMESIZE 500
 
+static void print_zip_huffmancode(HuffmanCode& HC)
+{
+	int a[255] = { 0 };
+	for (int i = 0; i < 255; ++i) {
+		a[i] = i;
+	}
+	PrintHuffmanCode(HC, a, 255);
+}
+
 void NextByte(int a, char* b) {
 	for (int i = 0; i < 8; i++) {
 		if (a) {
@@ -36,9 +45,10 @@ void NextByte_2(int a,char*c) {
 	c[i] = '#';
 }
 
-Status ReWrite(HuffmanTree &T, FILE *pr, int n, char *rezipname) {
+Status ReWrite(HuffmanTree &T, FILE *pr, int lastByteLen, int n, char *rezipname) {
 	char c[9], *s;
-	HuffmanTree p = T + 2 * n - 1;
+	HuffmanTree root = T + 2 * n - 1;
+	HuffmanTree p = root;
 	int a, pre_a, w = 0;//w为写入文件的每个字节的十进制数
 	a = fgetc(pr);
 	pre_a = a;
@@ -55,15 +65,9 @@ Status ReWrite(HuffmanTree &T, FILE *pr, int n, char *rezipname) {
  		if (*s == '0' && p->lchild) p = T + p->lchild;
 		else if(*s == '1' && p->rchild) p = T + p->rchild;
 		if (!p->lchild && !p->rchild) {
- 			if (*s == '0') {
-				w = (T + p->parent)->lchild - 1;
-				fwrite(&w, 1, 1, pw);
-			}
- 			else {
-				w = (T + p->parent)->rchild - 1;
-				fwrite(&w, 1, 1, pw);
-			}
- 			p = T + 2 * n - 1;//将一个字节写入文件 也就是解密了一个编码后，要将p指向根节点。也就是数组 T 的最后一个元素
+			w = p - T - 1;
+			fwrite(&w, 1, 1, pw);
+ 			p = root;//将一个字节写入文件 也就是解密了一个编码后，要将p指向根节点。也就是数组 T 的最后一个元素
  		}
  		s++;
 	 	if (*s == '#'){//如果*s为 '#'说明从压缩文件读出个这个字节已经解码完成。需要再读入一个字节 ；
@@ -76,19 +80,13 @@ Status ReWrite(HuffmanTree &T, FILE *pr, int n, char *rezipname) {
 	a = pre_a;
 	NextByte_2(a, c);
 	s = c;
- 	while (*s != '#') {
+ 	while (*s != '#' && lastByteLen-- > 0) {
 	 	if (*s == '0' && p->lchild) p = T + p->lchild;
 		else if(*s == '1' && p->rchild) p = T + p->rchild;
 		if (!p->lchild && !p->rchild){
- 			if (*s == '0') {
-				w = (T + p->parent)->lchild - 1;
-				fwrite(&w, 1, 1, pw);
-			}
- 			else {
-				w = (T + p->parent)->rchild - 1;
-				fwrite(&w, 1, 1, pw);
-			}
- 			p = T + 2 * n - 1;//将一个字节写入文件 也就是解密了一个编码后，要将p指向根节点。也就是数组 T 的最后一个元素
+			w = p - T - 1;
+			fwrite(&w, 1, 1, pw);
+			p = root;//将一个字节写入文件 也就是解密了一个编码后，要将p指向根节点。也就是数组 T 的最后一个元素
  		}
  		s++;
 	 }
@@ -96,7 +94,7 @@ Status ReWrite(HuffmanTree &T, FILE *pr, int n, char *rezipname) {
  	return OK;
 }
 
-static int GetFileName(char *dstName, const char *srcName, FILE *pf)
+static int GetFileName(char *dstName, const char *srcName, int extNameLen, FILE *pf)
 {
 	int rezipNameIndex = 0;
 	dstName[rezipNameIndex++] = 'r';
@@ -109,7 +107,7 @@ static int GetFileName(char *dstName, const char *srcName, FILE *pf)
 
 	// 读取文件前四字节，作为解压后文件的后缀名称
 	int readIndex = 0;
-	while (readIndex < 4) {
+	while (readIndex < extNameLen) {
 		dstName[rezipNameIndex++] = fgetc(pf);
 		readIndex++;
 	}
@@ -152,18 +150,21 @@ void rezip(const char*zipName)
 	//s	为压缩文件的地址和文件名。
 	printf("进行文件解压\n");
 	FILE *pr;
-	int n = 256;
+	int n = 256, lastByteLen;
 	HuffmanTree HT;
 	char rezipName[NAMESIZE] = { 0 };
+	char firstByte;
 	if(fopen_s(&pr, zipName, "rb")) {
 		printf("无法打开解压文件\n");
 		exit(1);
 	}
-	GetFileName(rezipName, zipName, pr);
+	fread(&firstByte, 1, 1, pr);
+	lastByteLen = firstByte >> 4;
+	GetFileName(rezipName, zipName, firstByte & 0x0F, pr);
 
 	ReadHuffmanTree(HT, pr, n);
 
-	ReWrite(HT, pr, n, rezipName);//将压缩文件解压
+	ReWrite(HT, pr, lastByteLen, n, rezipName);//将压缩文件解压
 	fclose(pr);
 	printf("解压成功！\n");
 }
