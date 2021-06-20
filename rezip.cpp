@@ -26,23 +26,15 @@ void NextByte(int a, char* b) {
 	b[8] = '#';
 }
 
-void NextByte_2(int a,char*c) {
-	char b[8];
-	int i = 0;
-	c[0] = '0';
-	for (i = 0; i < 8; i++) {
+void LastByte(int a, char *c, int lastByteLen) {
+	c[lastByteLen] = '#';
+	for (int i = 0; i < lastByteLen; i++) {
 		if (a) {
-			b[7 - i] = 48 + a % 2;
+			c[lastByteLen - i - 1] = 48 + a % 2;
 			a = a / 2;
 		}
-		else break;
+		else c[lastByteLen - i - 1] = '0';
 	}
-	
-	for (int k = 0; k < i; k++)
-		c[k] = b[8 - i + k];
-
-	if (!i) i++;//目的是排除a=0的情况；
-	c[i] = '#';
 }
 
 Status ReWrite(HuffmanTree &T, FILE *pr, int lastByteLen, int n, char *rezipname) {
@@ -53,7 +45,7 @@ Status ReWrite(HuffmanTree &T, FILE *pr, int lastByteLen, int n, char *rezipname
 	a = fgetc(pr);
 	pre_a = a;
 	if (!feof(pr)) NextByte(a, c);
-	else NextByte_2(a, c);
+	else LastByte(a, c, lastByteLen);
 	s = c;
 	a = fgetc(pr);
 	FILE *pw = NULL;
@@ -78,9 +70,9 @@ Status ReWrite(HuffmanTree &T, FILE *pr, int lastByteLen, int n, char *rezipname
 		 }
  	}
 	a = pre_a;
-	NextByte_2(a, c);
+	LastByte(a, c, lastByteLen);
 	s = c;
- 	while (*s != '#' && lastByteLen-- > 0) {
+ 	while (*s != '#') {
 	 	if (*s == '0' && p->lchild) p = T + p->lchild;
 		else if(*s == '1' && p->rchild) p = T + p->rchild;
 		if (!p->lchild && !p->rchild){
@@ -105,7 +97,7 @@ static int GetFileName(char *dstName, const char *srcName, int extNameLen, FILE 
 	}
 	dstName[rezipNameIndex++] = '.';
 
-	// 读取文件前四字节，作为解压后文件的后缀名称
+	// 读取解压后文件的后缀名称
 	int readIndex = 0;
 	while (readIndex < extNameLen) {
 		dstName[rezipNameIndex++] = fgetc(pf);

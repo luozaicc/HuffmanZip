@@ -14,16 +14,16 @@ static void print_zip_huffmancode(HuffmanCode &HC)
 }
 
 /**
- * 入参s为要压缩的文件名称
+ * 入参ori_name为要压缩的文件名称
  * 压缩后的文件名称定义为：zip+原文件名+.txt
  * 文件内容：
  * 1byte：最后一字节有效bit长度（4bit） + 源文件后缀名长度（4bit）
- * 源文件后缀名数据长度
+ * 源文件后缀名
  * 510byte的霍夫曼树
  */
-void zip(const char* s)
+void zip(const char* ori_name)
 {
-	//s	为要压缩的地址和文件名。
+	//ori_name	为要压缩的地址和文件名。
 	FILE *pr = NULL, *pw = NULL;
 	int a, nameIndex = 0, w[256], i, n = 256, m = 2 * n - 1;
 	char firstByte = 0;
@@ -31,13 +31,14 @@ void zip(const char* s)
 	HuffmanTree HT;
 	char zipname[NAMESIZE] = "zip", c = ' ';//压缩后的压缩文件名为zip+原文件名+.txt.
 	const char* suffix = ".txt";
-	while (s[nameIndex] != '.') {
-		zipname[3 + nameIndex] = s[nameIndex];
+	while (ori_name[nameIndex] != '.') {
+		zipname[3 + nameIndex] = ori_name[nameIndex];
 		nameIndex++;
 	}
 	strncpy_s(zipname + 3 + nameIndex, 100, suffix, strlen(suffix));
 
-	if (fopen_s(&pr, s, "rb")) {
+	printf("将要压缩的原文件名称为：%s", ori_name);
+	if (fopen_s(&pr, ori_name, "rb")) {
 		printf("文件打开失败！");
 		exit(1);
 	}
@@ -54,6 +55,7 @@ void zip(const char* s)
 	HuffmanCoding(HT, HC, w, 256);//求出霍夫曼树
 	print_zip_huffmancode(HC);
 	
+	printf("压缩文件名称为：%s\n", zipname);
 	// 打开压缩文件
 	if (fopen_s(&pw, zipname, "wb")) {
 		printf("文件%s打开失败！", zipname);
@@ -65,8 +67,8 @@ void zip(const char* s)
 
 	// 下面将文件的扩展名和霍夫曼树存入压缩文件中
 	// 先写入扩展名
-	while (s[++nameIndex]) {
-		fwrite(s + nameIndex, 1, 1, pw);
+	while (ori_name[++nameIndex]) {
+		fwrite(ori_name + nameIndex, 1, 1, pw);
 		firstByte++;
 	}
 	// 下面是写入霍夫曼树。只需要记录霍夫曼树的第257到 256*2元素的左右孩子就可以了。
@@ -78,7 +80,7 @@ void zip(const char* s)
 	 * 思路，打开文件，只要文件不到最后，就循环。 
 	 * 根据读出的值 ascII码 找到对应的HUffamanCode 凑成八位为一个字节写入文件中。
 	 */
-	fopen_s(&pr, s, "rb");//重新打开文件遍历文件进行压缩。
+	fopen_s(&pr, ori_name, "rb");//重新打开文件遍历文件进行压缩。
 	
 	hc = HC;
 	int byteValue = 0;

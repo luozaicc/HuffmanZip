@@ -4,9 +4,9 @@
 
 int main()
 {
-	const char* s = "123.doc";
-	const char* str2 = "zip123.txt";
-	zip(s);
-	rezip(str2);
+	const char* ori_name = "123.doc";
+	const char* zip_name = "zip123.txt";
+	zip(ori_name);
+	rezip(zip_name);
 	return 0;
 }
